@@ -1,0 +1,68 @@
+name: Build and sign RPM
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-rpm:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm gnupg fpm
+
+      - name: Import GPG key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.RPM_GPG_PRIVATE_KEY }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          gpg --list-secret-keys --keyid-format LONG
+
+      - name: Configure rpm macros
+        env:
+          KEY_ID: ${{ secrets.RPM_GPG_KEY_ID }}
+        run: |
+          cat <<EOF > ~/.rpmmacros
+          %_signature gpg
+          %_gpg_name ${KEY_ID}
+          %_gpg_path ~/.gnupg
+          %_gpgbin /usr/bin/gpg
+          %_gpg_sign_cmd_extra_args --batch --pinentry-mode loopback
+          EOF
+
+      - name: Build RPM with fpm
+        run: |
+          fpm -s dir -t rpm \
+              -n mypkg \
+              -v 1.0.0 \
+              --iteration 1 \
+              --architecture x86_64 \
+              --prefix /usr/local \
+              myfiles/=/
+
+      - name: Sign RPM
+        env:
+          GPG_PASSPHRASE: ${{ secrets.RPM_GPG_PASSPHRASE }}
+        run: |
+          echo "$GPG_PASSPHRASE" | \
+            rpm --addsign *.rpm \
+            --define "_gpg_sign_cmd_extra_args --batch --pinentry-mode loopback --passphrase-fd 0"
+
+      - name: Verify RPM signature
+        run: |
+          rpm -Kv *.rpm
+
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-rpm
+          path: "*.rpm"
+

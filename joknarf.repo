@@ -1,0 +1,5 @@
+[joknarftools]
+name=Joknarf Tools
+baseurl=https://joknarf.github.io/yum/
+enabled=1
+gpgcheck=0

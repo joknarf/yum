@@ -1,0 +1,20 @@
+| Secret name           | Content                                                              |
+| --------------------- | -------------------------------------------------------------------- |
+| `RPM_GPG_PRIVATE_KEY` | ASCII-armored private key (`gpg --export-secret-keys --armor KEYID`) |
+| `RPM_GPG_PASSPHRASE`  | Passphrase for the key                                               |
+| `RPM_GPG_KEY_ID`      | Short or long key ID (e.g. `ABCDEF1234567890`)                       |
+
+gpg --list-keys
+
+gpg --batch --full-generate-key <<'EOF'
+Key-Type: RSA
+Key-Length: 4096
+Subkey-Type: RSA
+Subkey-Length: 4096
+Name-Real: RPM Signing Key
+Name-Email: rpm-signing@yourdomain.com
+Expire-Date: 2y
+Passphrase: CHANGE_ME_STRONG_PASSPHRASE
+%commit
+EOF
+
